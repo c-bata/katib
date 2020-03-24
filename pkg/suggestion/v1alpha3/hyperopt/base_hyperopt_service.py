@@ -2,8 +2,10 @@ import hyperopt
 import numpy as np
 import logging
 
-from pkg.suggestion.v1alpha3.internal.search_space import *
-from pkg.suggestion.v1alpha3.internal.trial import *
+from pkg.suggestion.v1alpha3.internal.search_space import (
+    INTEGER, DOUBLE, DISCRETE, CATEGORICAL, MAX_GOAL,
+)
+from pkg.suggestion.v1alpha3.internal.trial import Assignment
 
 logger = logging.getLogger("BaseHyperoptService")
 
