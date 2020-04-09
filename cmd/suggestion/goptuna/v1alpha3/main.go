@@ -1,8 +1,6 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"net"
 
 	"github.com/kubeflow/katib/pkg/apis/manager/v1alpha3"
@@ -11,23 +9,17 @@ import (
 	"k8s.io/klog"
 )
 
-var (
-	port, host string
-)
+const address = "0.0.0.0:6789"
 
 func main() {
-	flag.StringVar(&port, "port", "6789", "the port to listen to for incoming HTTP connections")
-	flag.StringVar(&host, "host", "0.0.0.0", "the host to listen to for incoming HTTP connections")
-	flag.Parse()
-
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", host, port))
+	l, err := net.Listen("tcp", address)
 	if err != nil {
 		klog.Fatalf("Failed to listen: %v", err)
 	}
 	srv := grpc.NewServer()
 	api_v1_alpha3.RegisterSuggestionServer(srv, suggestion.NewSuggestionService())
 
-	klog.Infof("Start Goptuna suggestion service: %s:%s", host, port)
+	klog.Infof("Start Goptuna suggestion service: %s", address)
 	err = srv.Serve(l)
 	if err != nil {
 		klog.Fatalf("Failed to serve: %v", err)
