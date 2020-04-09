@@ -82,13 +82,12 @@ func (s *SuggestionService) GetSuggestions(
 			klog.Errorf("Failed to sample next param: %s", err)
 			return nil, err
 		}
-
-		klog.Infof("Katib assignments: %#v", assignments)
 		parameterAssignments[i] = &api_v1_alpha3.GetSuggestionsReply_ParameterAssignments{
 			Assignments: assignments,
 		}
 	}
 
+	klog.Infof("Success to sample %d parameters", requestNumber)
 	return &api_v1_alpha3.GetSuggestionsReply{
 		ParameterAssignments: parameterAssignments,
 		Algorithm: &api_v1_alpha3.AlgorithmSpec{
