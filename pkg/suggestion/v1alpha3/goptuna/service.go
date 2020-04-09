@@ -93,7 +93,7 @@ func (s *SuggestionService) GetSuggestions(
 		}
 	}
 
-	assignments := make([]*api_v1_alpha3.ParameterAssignment, len(searchSpace))
+	assignments := make([]*api_v1_alpha3.ParameterAssignment, 0, len(searchSpace))
 	trial := goptuna.Trial{
 		Study: study,
 		ID:    nextTrialID,
@@ -162,8 +162,8 @@ func (s *SuggestionService) GetSuggestions(
 			})
 		}
 	}
-	klog.Info("Goptuna search space: %#v", searchSpace)
-	klog.Info("Katib assignments: %#v", assignments)
+	klog.Infof("Goptuna search space: %#v", searchSpace)
+	klog.Infof("Katib assignments: %#v", assignments)
 
 	return &api_v1_alpha3.GetSuggestionsReply{
 		ParameterAssignments: []*api_v1_alpha3.GetSuggestionsReply_ParameterAssignments{

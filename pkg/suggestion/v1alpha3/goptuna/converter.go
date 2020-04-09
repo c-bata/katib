@@ -86,7 +86,7 @@ func toGoptunaSearchSpace(parameters []*api_v1_alpha3.ParameterSpec) (map[string
 			if err != nil {
 				return nil, err
 			}
-			searchSpace[p.Name] = &goptuna.UniformDistribution{
+			searchSpace[p.Name] = goptuna.UniformDistribution{
 				High: high,
 				Low:  low,
 			}
@@ -99,13 +99,13 @@ func toGoptunaSearchSpace(parameters []*api_v1_alpha3.ParameterSpec) (map[string
 			if err != nil {
 				return nil, err
 			}
-			searchSpace[p.Name] = &goptuna.IntUniformDistribution{
+			searchSpace[p.Name] = goptuna.IntUniformDistribution{
 				High: high,
 				Low:  low,
 			}
 		} else if p.ParameterType == api_v1_alpha3.ParameterType_CATEGORICAL {
 			choices := p.GetFeasibleSpace().GetList()
-			searchSpace[p.Name] = &goptuna.CategoricalDistribution{
+			searchSpace[p.Name] = goptuna.CategoricalDistribution{
 				Choices: choices,
 			}
 		} else if p.ParameterType == api_v1_alpha3.ParameterType_DISCRETE {
@@ -113,7 +113,7 @@ func toGoptunaSearchSpace(parameters []*api_v1_alpha3.ParameterSpec) (map[string
 			// because goptuna.UniformDistributions needs to declare the parameter space
 			// with minimum value, maximum value and interval.
 			choices := p.GetFeasibleSpace().GetList()
-			searchSpace[p.Name] = &goptuna.CategoricalDistribution{
+			searchSpace[p.Name] = goptuna.CategoricalDistribution{
 				Choices: choices,
 			}
 		} else {
