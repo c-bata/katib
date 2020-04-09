@@ -3,7 +3,6 @@ package suggestion_goptuna_v1alpha3
 import (
 	"context"
 	"errors"
-	"strconv"
 
 	"github.com/c-bata/goptuna"
 	"github.com/kubeflow/katib/pkg/apis/manager/v1alpha3"
@@ -46,6 +45,8 @@ func (s *SuggestionService) GetSuggestions(
 		klog.Errorf("Failed to convert to Goptuna search space: %s", err)
 		return nil, err
 	}
+	klog.Infof("Goptuna search space: %#v", searchSpace)
+
 	studyOpts := make([]goptuna.StudyOption, 0, 3)
 	studyOpts = append(studyOpts, goptuna.StudyOptionSetDirection(direction))
 	if independentSampler != nil {
@@ -73,104 +74,23 @@ func (s *SuggestionService) GetSuggestions(
 		}
 	}
 
-	nextTrialID, err := study.Storage.CreateNewTrial(study.ID)
-	if err != nil {
-		klog.Errorf("Failed to create a new trial: %s", err)
-		return nil, err
-	}
-	nextTrial, err := study.Storage.GetTrial(nextTrialID)
-	if err != nil {
-		klog.Errorf("Failed to get a next trial: %s", err)
-		return nil, err
-	}
-
-	var relativeSampleParams map[string]float64
-	if relativeSampler != nil {
-		relativeSampleParams, err = relativeSampler.SampleRelative(study, nextTrial, searchSpace)
+	requestNumber := int(req.GetRequestNumber())
+	parameterAssignments := make([]*api_v1_alpha3.GetSuggestionsReply_ParameterAssignments, requestNumber)
+	for i := 0; i < requestNumber; i++ {
+		assignments, err := sampleNextParam(study, searchSpace)
 		if err != nil {
-			klog.Errorf("Failed to call SampleRelative: %s", err)
+			klog.Errorf("Failed to sample next param: %s", err)
 			return nil, err
 		}
-	}
 
-	assignments := make([]*api_v1_alpha3.ParameterAssignment, 0, len(searchSpace))
-	trial := goptuna.Trial{
-		Study: study,
-		ID:    nextTrialID,
-	}
-	for name := range searchSpace {
-		switch distribution := searchSpace[name].(type) {
-		case goptuna.UniformDistribution:
-			var p float64
-			if internalParam, ok := relativeSampleParams[name]; ok {
-				p = internalParam
-			} else {
-				p, err = trial.SuggestUniform(name, distribution.Low, distribution.High)
-				if err != nil {
-					klog.Errorf("Failed to get suggested param: %s", err)
-					return nil, err
-				}
-			}
-			assignments = append(assignments, &api_v1_alpha3.ParameterAssignment{
-				Name:  name,
-				Value: strconv.FormatFloat(p, 'f', -1, 64),
-			})
-		case goptuna.IntUniformDistribution:
-			var p int
-			if internalParam, ok := relativeSampleParams[name]; ok {
-				p = int(internalParam)
-			} else {
-				p, err = trial.SuggestInt(name, distribution.Low, distribution.High)
-				if err != nil {
-					klog.Errorf("Failed to get suggested param: %s", err)
-					return nil, err
-				}
-			}
-			assignments = append(assignments, &api_v1_alpha3.ParameterAssignment{
-				Name:  name,
-				Value: strconv.Itoa(p),
-			})
-		case goptuna.DiscreteUniformDistribution:
-			var p float64
-			if internalParam, ok := relativeSampleParams[name]; ok {
-				p = internalParam
-			} else {
-				p, err = trial.SuggestDiscreteUniform(name, distribution.Low, distribution.High, distribution.Q)
-				if err != nil {
-					klog.Errorf("Failed to get suggested param: %s", err)
-					return nil, err
-				}
-			}
-			assignments = append(assignments, &api_v1_alpha3.ParameterAssignment{
-				Name:  name,
-				Value: strconv.FormatFloat(p, 'f', -1, 64),
-			})
-		case goptuna.CategoricalDistribution:
-			var p string
-			if internalParam, ok := relativeSampleParams[name]; ok {
-				p = distribution.Choices[int(internalParam)]
-			} else {
-				p, err = trial.SuggestCategorical(name, distribution.Choices)
-				if err != nil {
-					klog.Errorf("Failed to get suggested param: %s", err)
-					return nil, err
-				}
-			}
-			assignments = append(assignments, &api_v1_alpha3.ParameterAssignment{
-				Name:  name,
-				Value: p,
-			})
+		klog.Infof("Katib assignments: %#v", assignments)
+		parameterAssignments[i] = &api_v1_alpha3.GetSuggestionsReply_ParameterAssignments{
+			Assignments: assignments,
 		}
 	}
-	klog.Infof("Goptuna search space: %#v", searchSpace)
-	klog.Infof("Katib assignments: %#v", assignments)
 
 	return &api_v1_alpha3.GetSuggestionsReply{
-		ParameterAssignments: []*api_v1_alpha3.GetSuggestionsReply_ParameterAssignments{
-			{
-				Assignments: assignments,
-			},
-		},
+		ParameterAssignments: parameterAssignments,
 		Algorithm: &api_v1_alpha3.AlgorithmSpec{
 			AlgorithmName:     "",
 			AlgorithmSetting:  nil,
